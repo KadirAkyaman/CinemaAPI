@@ -10,7 +10,7 @@ public class UserService : IUserService
         _context = context;
         _logger = logger;
     }
-    public async Task<User> CreateUserAsync(User user)
+    public async Task<UserDto> CreateUserAsync(User user)
     {
         if (user == null)
             throw new ArgumentNullException(nameof(user));
@@ -18,7 +18,17 @@ public class UserService : IUserService
         await _userRepository.InsertAsync(user);
 
         await _context.SaveChangesAsync();
-        return user;
+
+        var createdUserDto = new UserDto
+        {
+            Id = user.Id, // Artık ID'si var
+            Username = user.Username,
+            Email = user.Email,
+            Role = user.Role,
+            IsActive = user.IsActive
+        };
+
+        return createdUserDto;
     }
 
     public async Task<bool> DeleteUserAsync(int id)
@@ -44,16 +54,42 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<IEnumerable<User>> GetAllUsersAsync()
+    public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
     {
         var users = await _userRepository.GetAllAsync();
-        return users;
+
+        if (users == null || !users.Any())
+            return Enumerable.Empty<UserDto>(); 
+
+        var userDtos = users.Select(user => new UserDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            Role = user.Role,
+            IsActive = user.IsActive
+        }).ToList();
+
+        return userDtos;
     }
 
-    public async Task<User?> GetUserByIdAsync(int id)
+    public async Task<UserDto?> GetUserByIdAsync(int id)
     {
         var user = await _userRepository.GetByIdAsync(id);
-        return user;
+
+        if (user == null)
+            return null;
+
+        var userDto = new UserDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            Role = user.Role,
+            Username = user.Username,
+            IsActive = user.IsActive
+        };
+
+        return userDto;
     }
 
     public async Task UpdateUserAsync(int id, User user)
