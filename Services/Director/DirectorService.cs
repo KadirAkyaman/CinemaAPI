@@ -67,9 +67,9 @@ public class DirectorService : IDirectorService
         directorToUpdate.Name = director.Name;
         directorToUpdate.Surname = director.Surname;
 
-        await _directorRepository.UpdateAsync(directorToUpdate);
+        await _directorRepository.Update(directorToUpdate);
         await _context.SaveChangesAsync();
     }
-    
-    
+
+
 }

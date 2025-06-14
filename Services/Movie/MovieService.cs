@@ -11,8 +11,8 @@ public class MovieService : IMovieService
         _logger = logger;
     }
     public async Task<Movie> CreateMovieAsync(Movie movie)
-    {   
-        if(movie == null)
+    {
+        if (movie == null)
             throw new ArgumentNullException(nameof(movie));
 
         //-----
@@ -24,9 +24,9 @@ public class MovieService : IMovieService
         {
             movie.ReleaseDate = movie.ReleaseDate.ToUniversalTime();
         }
-    
+
         await _movieRepository.InsertAsync(movie);
-    
+
         await _context.SaveChangesAsync();
         return movie;
     }
@@ -78,7 +78,7 @@ public class MovieService : IMovieService
         movieToUpdate.Description = movie.Description;
         movieToUpdate.DirectorId = movie.DirectorId;
         movieToUpdate.Genre = movie.Genre;
-    
+
         // ReleaseDate'i UTC'ye çevir
         if (movie.ReleaseDate.Kind == DateTimeKind.Unspecified)
         {
@@ -92,10 +92,10 @@ public class MovieService : IMovieService
         {
             movieToUpdate.ReleaseDate = movie.ReleaseDate;
         }
-        
+
         movieToUpdate.Title = movie.Title;
-    
-        await _movieRepository.UpdateAsync(movieToUpdate);
+
+        await _movieRepository.Update(movieToUpdate);
         await _context.SaveChangesAsync();
     }
 }

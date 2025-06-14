@@ -23,7 +23,7 @@ public class UserService : IUserService
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(userRegisterDto.Password),
             Role = userRegisterDto.Role,
             IsActive = true
-        };  
+        };
 
         await _userRepository.InsertAsync(user);
         await _context.SaveChangesAsync();
@@ -68,7 +68,7 @@ public class UserService : IUserService
         var users = await _userRepository.GetAllAsync();
 
         if (users == null || !users.Any())
-            return Enumerable.Empty<UserDto>(); 
+            return Enumerable.Empty<UserDto>();
 
         var userDtos = users.Select(user => new UserDto
         {
@@ -120,9 +120,9 @@ public class UserService : IUserService
         {
             userToUpdate.IsActive = userUpdateDto.IsActive.Value;
         }
-        if (!string.IsNullOrWhiteSpace(userUpdateDto.NewPassword))
+        if (!string.IsNullOrWhiteSpace(userUpdateDto.Password))
         {
-            userToUpdate.PasswordHash = BCrypt.Net.BCrypt.HashPassword(userUpdateDto.NewPassword);
+            userToUpdate.PasswordHash = BCrypt.Net.BCrypt.HashPassword(userUpdateDto.Password);
             _logger.LogInformation($"Password updated for user with id {id}.");
         }
         if (!string.IsNullOrWhiteSpace(userUpdateDto.Username) && userUpdateDto.Username != userToUpdate.Username)
@@ -136,7 +136,7 @@ public class UserService : IUserService
             userToUpdate.Username = userUpdateDto.Username;
         }
 
-        await _userRepository.UpdateAsync(userToUpdate);
+        await _userRepository.Update(userToUpdate);
         await _context.SaveChangesAsync();
         _logger.LogInformation($"User with id {id} updated successfully.");
     }

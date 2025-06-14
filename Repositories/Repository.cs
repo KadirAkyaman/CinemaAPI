@@ -21,7 +21,7 @@ public class Repository<T> : IRepository<T> where T : class, IEntity
             if (data != null)
                 _context.Set<T>().Remove(data);
 
-            
+
         }
         catch (Exception ex)
         {
@@ -48,7 +48,7 @@ public class Repository<T> : IRepository<T> where T : class, IEntity
     {
         try
         {
-            var data = await _context.Set<T>().AsNoTracking().SingleOrDefaultAsync(d => d.Id == id);
+            var data = await _context.Set<T>().SingleOrDefaultAsync(d => d.Id == id);
             return data;
         }
         catch (Exception ex)
@@ -63,7 +63,7 @@ public class Repository<T> : IRepository<T> where T : class, IEntity
         try
         {
             await _context.Set<T>().AddAsync(entity);
-            
+
         }
         catch (Exception ex)
         {
@@ -72,17 +72,17 @@ public class Repository<T> : IRepository<T> where T : class, IEntity
         }
     }
 
-    public async Task UpdateAsync(T entity)
+    public Task Update(T entity)
     {
         try
         {
-            _context.Set<T>().Attach(entity);
-            _context.Entry(entity).State = EntityState.Modified;    
+            _context.Set<T>().Update(entity);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"An error occurred while updating the entity with id {entity.Id}.");
+            _logger.LogError(ex, $"Error in Repository.Update for entity id {entity.Id}.");
             throw;
         }
+        return Task.CompletedTask;
     }
 }

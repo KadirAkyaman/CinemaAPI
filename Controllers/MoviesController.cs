@@ -1,8 +1,10 @@
 using System.Net;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/movies")]
+[Authorize] //only authorized persons can access this endpoint
 public class MoviesController : ControllerBase
 {
     private readonly IMovieService _movieService;

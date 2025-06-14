@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/directors")]
+[Authorize]
 public class DirectorsController : ControllerBase
 {
     private readonly IDirectorService _directorService;
