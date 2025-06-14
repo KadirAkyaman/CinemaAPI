@@ -49,13 +49,10 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<UserDto>> CreateUserAsync([FromBody] User user)
+    public async Task<ActionResult<UserDto>> CreateUserAsync([FromBody] UserRegisterDto userRegisterDto)
     {
-        if (user == null)
+        if (userRegisterDto == null)
             return BadRequest("User data cannot be null!");
-
-        if (user.Id != 0)
-            return BadRequest("User ID should not be set when creating a new movie.");
 
         if (!ModelState.IsValid)
         {
@@ -64,28 +61,28 @@ public class UsersController : ControllerBase
 
         try
         {
-            var createdUserDto = await _userService.CreateUserAsync(user);
+            var createdUserDto = await _userService.CreateUserAsync(userRegisterDto);
             return CreatedAtRoute("GetUserById", new { id = createdUserDto.Id }, createdUserDto);
         }
         catch (ArgumentException argEx)
         {
-            _logger.LogWarning(argEx, $"Validation or business rule error while creating user: {user?.Username}");
+            _logger.LogWarning(argEx, $"Validation or business rule error while creating user: {userRegisterDto?.Username}");
             return BadRequest(argEx.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"An unexpected error occurred while creating user. Attempted title: {user?.Username}");
+            _logger.LogError(ex, $"An unexpected error occurred while creating user. Attempted title: {userRegisterDto?.Username}");
             return StatusCode(500, "An internal error occurred while creating the user.");
         }
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult> UpdateUserAsync(int id, [FromBody] User user)
+    public async Task<ActionResult> UpdateUserAsync(int id, [FromBody] UserUpdateDto userUpdateDto)
     {
         if (id <= 0) // Bu kontrol eklenebilir
             return BadRequest("Invalid user ID.");
 
-        if (user == null)
+        if (userUpdateDto == null)
             return BadRequest("User data cannot be null!");
 
         if (!ModelState.IsValid)
@@ -93,12 +90,9 @@ public class UsersController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        if (id != user.Id)
-            return BadRequest("The ID in the URL does not match the ID in the request body.");
-
         try
         {
-            await _userService.UpdateUserAsync(id, user);
+            await _userService.UpdateUserAsync(id, userUpdateDto);
             return NoContent();
         }
         catch (KeyNotFoundException knfex)

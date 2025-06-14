@@ -1,4 +1,5 @@
-
+using BCrypt.Net;
+using Microsoft.EntityFrameworkCore;
 public class UserService : IUserService
 {
     private readonly IRepository<User> _userRepository;
@@ -10,18 +11,26 @@ public class UserService : IUserService
         _context = context;
         _logger = logger;
     }
-    public async Task<UserDto> CreateUserAsync(User user)
+    public async Task<UserDto> CreateUserAsync(UserRegisterDto userRegisterDto) // UserRegisterDto and Password hash with BCrypt
     {
-        if (user == null)
-            throw new ArgumentNullException(nameof(user));
+        if (userRegisterDto == null)
+            throw new ArgumentNullException(nameof(userRegisterDto));
+
+        var user = new User
+        {
+            Username = userRegisterDto.Username,
+            Email = userRegisterDto.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(userRegisterDto.Password),
+            Role = userRegisterDto.Role,
+            IsActive = true
+        };  
 
         await _userRepository.InsertAsync(user);
-
         await _context.SaveChangesAsync();
 
         var createdUserDto = new UserDto
         {
-            Id = user.Id, // Artık ID'si var
+            Id = user.Id, // 
             Username = user.Username,
             Email = user.Email,
             Role = user.Role,
@@ -92,7 +101,7 @@ public class UserService : IUserService
         return userDto;
     }
 
-    public async Task UpdateUserAsync(int id, User user)
+    public async Task UpdateUserAsync(int id, UserUpdateDto userUpdateDto)
     {
         var userToUpdate = await _userRepository.GetByIdAsync(id);
         if (userToUpdate == null)
@@ -100,13 +109,35 @@ public class UserService : IUserService
             _logger.LogWarning($"User with id {id} not found for update.");
             throw new KeyNotFoundException($"User with id {id} not found.");
         }
-        userToUpdate.Username = user.Username;
-        userToUpdate.Email = user.Email;
-        userToUpdate.PasswordHash = user.PasswordHash;
-        userToUpdate.Role = user.Role;
-        userToUpdate.IsActive = user.IsActive;
+        if (userUpdateDto.Email != null)
+            userToUpdate.Email = userUpdateDto.Email;
+
+        if (userUpdateDto.Role != null)
+        {
+            userToUpdate.Role = userUpdateDto.Role;
+        }
+        if (userUpdateDto.IsActive.HasValue)
+        {
+            userToUpdate.IsActive = userUpdateDto.IsActive.Value;
+        }
+        if (!string.IsNullOrWhiteSpace(userUpdateDto.NewPassword))
+        {
+            userToUpdate.PasswordHash = BCrypt.Net.BCrypt.HashPassword(userUpdateDto.NewPassword);
+            _logger.LogInformation($"Password updated for user with id {id}.");
+        }
+        if (!string.IsNullOrWhiteSpace(userUpdateDto.Username) && userUpdateDto.Username != userToUpdate.Username)
+        {
+            bool usernameExists = await _context.Users.AnyAsync(u => u.Id != id && u.Username == userUpdateDto.Username);
+            if (usernameExists)
+            {
+                _logger.LogWarning($"Update failed for user {id}: Username '{userUpdateDto.Username}' is already in use.");
+                throw new ArgumentException("Username is already in use by another account.");
+            }
+            userToUpdate.Username = userUpdateDto.Username;
+        }
 
         await _userRepository.UpdateAsync(userToUpdate);
         await _context.SaveChangesAsync();
+        _logger.LogInformation($"User with id {id} updated successfully.");
     }
 }
