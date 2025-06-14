@@ -34,7 +34,7 @@ public class Repository<T> : IRepository<T> where T : class, IEntity
     {
         try
         {
-            var datas = await _context.Set<T>().AsNoTracking().ToListAsync();
+            var datas = await _context.Set<T>().ToListAsync();
             return datas;
         }
         catch (Exception ex)
