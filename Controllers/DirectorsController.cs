@@ -15,7 +15,7 @@ public class DirectorsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Director>>> GetAllDirectorsAsync()
+    public async Task<ActionResult<IEnumerable<DirectorDto>>> GetAllDirectorsAsync()
     {
         try
         {
@@ -30,17 +30,17 @@ public class DirectorsController : ControllerBase
     }
 
     [HttpGet("{id:int}", Name = "GetDirectorById")]
-    public async Task<ActionResult<Director>> GetDirectorByIdAsync(int id) 
+    public async Task<ActionResult<DirectorDto>> GetDirectorByIdAsync(int id)
     {
         if (id <= 0)
             return BadRequest("Invalid director ID.");
         try
         {
-            var director = await _directorService.GetDirectorByIdAsync(id); 
-            if (director == null)
+            var directorDto = await _directorService.GetDirectorByIdAsync(id);
+            if (directorDto == null)
                 return NotFound();
 
-            return Ok(director);
+            return Ok(directorDto);
         }
         catch (Exception ex)
         {
@@ -50,13 +50,10 @@ public class DirectorsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Director>> CreateDirectorAsync([FromBody] Director director)
+    public async Task<ActionResult<DirectorDto>> CreateDirectorAsync([FromBody] DirectorCreateDto directorCreateDto)
     {
-        if (director == null)
+        if (directorCreateDto == null)
             return BadRequest("Director data cannot be null!");
-
-        if (director.Id != 0)
-            return BadRequest("Director ID should not be set when creating a new director.");
 
         if (!ModelState.IsValid)
         {
@@ -65,42 +62,33 @@ public class DirectorsController : ControllerBase
 
         try
         {
-            var createdDirector = await _directorService.CreateDirectorAsync(director);
+            var createdDirectorDbo = await _directorService.CreateDirectorAsync(directorCreateDto);
 
-            return CreatedAtRoute("GetDirectorById", new { id = createdDirector.Id }, createdDirector);
+            return CreatedAtRoute("GetDirectorById", new { id = createdDirectorDbo.Id }, createdDirectorDbo);
         }
         catch (ArgumentException argEx)
         {
-            _logger.LogWarning(argEx, $"Validation or business rule error while creating director: {director?.Name} {director?.Surname}");
+            _logger.LogWarning(argEx, $"Validation or business rule error while creating director: {directorCreateDto?.Name} {directorCreateDto?.Surname}");
             return BadRequest(argEx.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"An unexpected error occurred while creating director. {director?.Name} {director?.Surname}");
+            _logger.LogError(ex, $"An unexpected error occurred while creating director. {directorCreateDto?.Name} {directorCreateDto?.Surname}");
             return StatusCode(500, "An internal error occurred while creating the director.");
         }
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult> UpdateDirectorAsync(int id, [FromBody] Director director)
+    public async Task<ActionResult> UpdateDirectorAsync(int id, [FromBody] DirectorUpdateDto directorUpdateDto)
     {
-        if (id <= 0) // Bu kontrol eklenebilir
-            return BadRequest("Invalid director ID.");
-
-        if (director == null)
-            return BadRequest("Director data cannot be null!");
-
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        if (id != director.Id)
-            return BadRequest("The ID in the URL does not match the ID in the request body.");
-
         try
         {
-            await _directorService.UpdateDirectorAsync(id, director);
+            await _directorService.UpdateDirectorAsync(id, directorUpdateDto);
             return NoContent();
         }
         catch (KeyNotFoundException knfex)
@@ -119,7 +107,7 @@ public class DirectorsController : ControllerBase
             return StatusCode(500, "An internal error occurred while updating the director.");
         }
     }
-    
+
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> DeleteDirectorAsync(int id)
     {

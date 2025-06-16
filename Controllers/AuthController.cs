@@ -50,9 +50,36 @@ public class AuthController : ControllerBase
         }
 
         _logger.LogInformation($"User {userLoginDto.Username} logged in successfully.");
-        
+
         string createdToken = GenerateJwtToken(userToLogin);
         return Ok(new { token = createdToken });
+    }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] UserRegisterDto userRegisterDto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var createdUserDto = await _userService.CreateUserAsync(userRegisterDto);
+
+            _logger.LogInformation($"User {createdUserDto.Username} registered in successfully.");
+
+            string createdToken = GenerateJwtTokenForDto(createdUserDto);
+            return Ok(new { token = createdToken });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, $"Registration attempt failed: {ex.Message}");
+            return Conflict(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An unexpected error occurred during user registration.");
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An unexpected error occurred while processing your request." });
+        }
     }
 
     private string GenerateJwtToken(User user)
@@ -91,6 +118,45 @@ public class AuthController : ControllerBase
         var tokenObject = tokenHandler.CreateToken(tokenDescriptor);
         string tokenString = tokenHandler.WriteToken(tokenObject);
         _logger.LogInformation($"Token generated successfully for user: {user.Username}");
-        return tokenString;        
+        return tokenString;
+    }
+
+    private string GenerateJwtTokenForDto(UserDto userDto)
+    {
+        var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, userDto.Id.ToString()),
+        new Claim(ClaimTypes.Name, userDto.Username),
+        new Claim(ClaimTypes.Email, userDto.Email),
+        new Claim(ClaimTypes.Role, userDto.Role),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+        var jwtKey = _configuration["Jwt:Key"];
+        var issuer = _configuration["Jwt:Issuer"];
+        var audience = _configuration["Jwt:Audience"];
+
+        if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(audience))
+        {
+            _logger.LogError("JWT configuration (Key, Issuer, or Audience) is missing or empty in appsettings.json.");
+            throw new InvalidOperationException("JWT configuration is not properly set up.");
+        }
+
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature);
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddHours(1),
+            Issuer = issuer,
+            Audience = audience,
+            SigningCredentials = credentials
+        };
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var tokenObject = tokenHandler.CreateToken(tokenDescriptor);
+        string tokenString = tokenHandler.WriteToken(tokenObject);
+        _logger.LogInformation($"Token generated successfully for newly registered user: {userDto.Username}");
+        return tokenString;
     }
 }

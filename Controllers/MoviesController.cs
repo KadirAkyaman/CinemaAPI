@@ -16,12 +16,12 @@ public class MoviesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Movie>>> GetAllMoviesAsync()
+    public async Task<ActionResult<IEnumerable<MovieDto>>> GetAllMoviesAsync()
     {
         try
         {
-            var movies = await _movieService.GetAllMoviesAsync();
-            return Ok(movies);
+            var movieDtos = await _movieService.GetAllMoviesAsync();
+            return Ok(movieDtos);
         }
         catch (Exception ex)
         {
@@ -31,17 +31,17 @@ public class MoviesController : ControllerBase
     }
 
     [HttpGet("{id:int}", Name = "GetMovieById")]
-    public async Task<ActionResult<Movie>> GetMovieByIdAsync(int id)
+    public async Task<ActionResult<MovieDto>> GetMovieByIdAsync(int id)
     {
         if (id <= 0)
             return BadRequest("Invalid movie ID.");
         try
         {
-            var movie = await _movieService.GetMovieByIdAsync(id);
-            if (movie == null)
+            var movieDto = await _movieService.GetMovieByIdAsync(id);
+            if (movieDto == null)
                 return NotFound();
 
-            return Ok(movie);
+            return Ok(movieDto);
         }
         catch (Exception ex)
         {
@@ -51,13 +51,10 @@ public class MoviesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Movie>> CreateMovieAsync([FromBody] Movie movie)
+    public async Task<ActionResult<MovieDto>> CreateMovieAsync([FromBody] MovieCreateDto movieCreateDto)
     {
-        if (movie == null)
+        if (movieCreateDto == null)
             return BadRequest("Movie data cannot be null!");
-            
-        if (movie.Id != 0)
-            return BadRequest("Movie ID should not be set when creating a new movie.");
 
         if (!ModelState.IsValid)
         {
@@ -66,41 +63,32 @@ public class MoviesController : ControllerBase
 
         try
         {
-            var createdMovie = await _movieService.CreateMovieAsync(movie);
-            return CreatedAtRoute("GetMovieById", new { id = createdMovie.Id }, createdMovie);
+            var createdMovieDto = await _movieService.CreateMovieAsync(movieCreateDto);
+            return CreatedAtRoute("GetMovieById", new { id = createdMovieDto.Id }, createdMovieDto);
         }
-        catch (ArgumentException argEx) 
+        catch (ArgumentException ex)
         {
-            _logger.LogWarning(argEx, $"Validation or business rule error while creating movie: {movie?.Title}");
-            return BadRequest(argEx.Message);
+            _logger.LogWarning(ex, $"Error creating movie: {ex.Message}");
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"An unexpected error occurred while creating movie. Attempted title: {movie?.Title}");
+            _logger.LogError(ex, $"An unexpected error occurred while creating movie. Attempted title: {movieCreateDto?.Title}");
             return StatusCode(500, "An internal error occurred while creating the movie.");
         }
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult> UpdateMovieAsync(int id, [FromBody] Movie movie)
+    public async Task<ActionResult> UpdateMovieAsync(int id, [FromBody] MovieUpdateDto movieUpdateDto)
     {
-        if (id <= 0) // Bu kontrol eklenebilir
-            return BadRequest("Invalid movie ID.");
-
-        if (movie == null)
-            return BadRequest("Movie data cannot be null!");
-
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
-        
-        if (id != movie.Id)
-            return BadRequest("The ID in the URL does not match the ID in the request body.");
 
         try
         {
-            await _movieService.UpdateMovieAsync(id, movie);
+            await _movieService.UpdateMovieAsync(id, movieUpdateDto);
             return NoContent();
         }
         catch (KeyNotFoundException knfex)

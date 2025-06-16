@@ -50,10 +50,10 @@ namespace CinemaAPI.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Title = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
+                    Description = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
                     ReleaseDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Genre = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: false),
-                    DirectorId = table.Column<int>(type: "integer", nullable: false)
+                    Genre = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: true),
+                    DirectorId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {

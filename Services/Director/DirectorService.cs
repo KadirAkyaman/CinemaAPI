@@ -1,4 +1,4 @@
-
+using Microsoft.EntityFrameworkCore;
 public class DirectorService : IDirectorService
 {
     private readonly IRepository<Director> _directorRepository;
@@ -10,15 +10,26 @@ public class DirectorService : IDirectorService
         _context = context;
         _logger = logger;
     }
-    public async Task<Director> CreateDirectorAsync(Director director)
+    public async Task<DirectorDto> CreateDirectorAsync(DirectorCreateDto directorCreateDto)
     {
-        if (director == null)
-            throw new ArgumentNullException(nameof(director));
+        if (directorCreateDto == null)
+            throw new ArgumentNullException(nameof(directorCreateDto));
 
-        await _directorRepository.InsertAsync(director);
+        var newDirector = new Director
+        {
+            Name = directorCreateDto.Name,
+            Surname = directorCreateDto.Surname
+        };
+
+        await _directorRepository.InsertAsync(newDirector);
 
         await _context.SaveChangesAsync();
-        return director;
+        return new DirectorDto
+        {
+            Id = newDirector.Id,
+            Name = newDirector.Name,
+            Surname = newDirector.Surname
+        };
     }
 
     public async Task<bool> DeleteDirectorAsync(int id)
@@ -44,28 +55,53 @@ public class DirectorService : IDirectorService
         }
     }
 
-    public async Task<IEnumerable<Director>> GetAllDirectorsAsync()
+    public async Task<IEnumerable<DirectorDto>> GetAllDirectorsAsync()
     {
         var directors = await _directorRepository.GetAllAsync();
-        return directors;
+        var directorDtos = directors.Select(director => new DirectorDto
+        {
+            Id = director.Id,
+            Name = director.Name,
+            Surname = director.Surname
+        }).ToList();
+        return directorDtos;
     }
 
-    public async Task<Director?> GetDirectorByIdAsync(int id)
+    public async Task<DirectorDto?> GetDirectorByIdAsync(int id)
     {
         var director = await _directorRepository.GetByIdAsync(id);
-        return director;
+        if (director == null)
+            return null;
+
+        var directorDto = new DirectorDto
+        {
+            Id = director.Id,
+            Name = director.Name,
+            Surname = director.Surname
+        };
+        return directorDto;
     }
 
-    public async Task UpdateDirectorAsync(int id, Director director)
+    public async Task UpdateDirectorAsync(int id, DirectorUpdateDto directorUpdateDto)
     {
+        if (directorUpdateDto == null)
+            throw new ArgumentNullException(nameof(directorUpdateDto));
+
         var directorToUpdate = await _directorRepository.GetByIdAsync(id);
         if (directorToUpdate == null)
         {
             _logger.LogWarning($"Director with id {id} not found for update.");
             throw new KeyNotFoundException($"Director with id {id} not found.");
         }
-        directorToUpdate.Name = director.Name;
-        directorToUpdate.Surname = director.Surname;
+
+        if (!string.IsNullOrWhiteSpace(directorUpdateDto.Name))
+        {
+            directorToUpdate.Name = directorUpdateDto.Name;
+        }
+        if (!string.IsNullOrWhiteSpace(directorUpdateDto.Surname))
+        {
+            directorToUpdate.Surname = directorUpdateDto.Surname;
+        }
 
         await _directorRepository.Update(directorToUpdate);
         await _context.SaveChangesAsync();

@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/users")]
+[Authorize(Roles = "Admin")]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -111,7 +113,7 @@ public class UsersController : ControllerBase
             return StatusCode(500, "An internal error occurred while updating the user.");
         }
     }
-    
+
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> DeleteUserAsync(int id)
     {
