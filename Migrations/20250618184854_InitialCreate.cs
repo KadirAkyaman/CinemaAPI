@@ -53,7 +53,7 @@ namespace CinemaAPI.Migrations
                     Description = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
                     ReleaseDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Genre = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: true),
-                    DirectorId = table.Column<int>(type: "integer", nullable: true)
+                    DirectorId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {

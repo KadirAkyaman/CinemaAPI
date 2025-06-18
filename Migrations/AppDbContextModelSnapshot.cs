@@ -56,7 +56,7 @@ namespace CinemaAPI.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
 
-                    b.Property<int?>("DirectorId")
+                    b.Property<int>("DirectorId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Genre")
@@ -128,7 +128,8 @@ namespace CinemaAPI.Migrations
                     b.HasOne("Director", "Director")
                         .WithMany("Movies")
                         .HasForeignKey("DirectorId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .IsRequired();
 
                     b.Navigation("Director");
                 });
