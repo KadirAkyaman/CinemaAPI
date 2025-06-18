@@ -14,7 +14,7 @@ CinemaAPI is a .NET Core Web API for managing a film archive. It utilizes Postgr
 
 ## Technologies Used
 
-*   **.NET 9.0 **  - API Framework
+*   **.NET 9.0**  - API Framework
 *   **ASP.NET Core Web API** - For building RESTful APIs
 *   **Entity Framework Core** - ORM for database interaction (Code-First approach)
 *   **PostgreSQL** - Relational Database
@@ -102,7 +102,8 @@ Here are some example endpoints:
         {
             "username": "testuser",
             "email": "test@example.com",
-            "password": "Password123!"
+            "password": "Password123!",
+            "role": "Admin"
         }
         ```
 
