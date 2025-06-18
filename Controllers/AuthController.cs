@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -13,13 +15,15 @@ public class AuthController : ControllerBase
     private readonly IUserService _userService;
     private readonly ILogger<AuthController> _logger;
     private readonly IConfiguration _configuration; // JWT
+    private readonly IDistributedCache _distributedCache; //Redis
 
-    public AuthController(AppDbContext context, IUserService userService, ILogger<AuthController> logger, IConfiguration configuration)
+    public AuthController(AppDbContext context, IUserService userService, ILogger<AuthController> logger, IConfiguration configuration, IDistributedCache distributedCache)
     {
         _context = context;
         _userService = userService;
         _logger = logger;
-        _configuration = configuration;
+        _configuration = configuration; //JWT
+        _distributedCache = distributedCache; //Redis
     }
 
     [HttpPost("login")] // api/auth/login 
@@ -80,6 +84,53 @@ public class AuthController : ControllerBase
             _logger.LogError(ex, "An unexpected error occurred during user registration.");
             return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An unexpected error occurred while processing your request." });
         }
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout()
+    {
+        var jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti);
+
+        if (string.IsNullOrEmpty(jti))
+        {
+            _logger.LogWarning("Logout attempt with a token missing JTI claim.");
+            return BadRequest(new { message = "Token ID (JTI) not found in token." });
+        }
+
+        var expClaimValue = User.FindFirstValue(JwtRegisteredClaimNames.Exp);
+
+        if (string.IsNullOrEmpty(expClaimValue) || !long.TryParse(expClaimValue, out long expUnixTimestamp))
+        {
+            _logger.LogWarning($"Logout attempt for token JTI: {jti} with missing or invalid EXP claim.");
+            return BadRequest(new { message = "Invalid token expiration claim." });
+        }
+
+        if (expUnixTimestamp <= 0) //0 || <0
+        {
+            _logger.LogWarning($"Logout attempt for token JTI: {jti} with non-positive EXP claim value: {expUnixTimestamp}.");
+            return BadRequest(new { message = "Token expiration claim value must be positive." });
+        }
+
+        var expiryDateTimeUtc = DateTimeOffset.FromUnixTimeSeconds(expUnixTimestamp).UtcDateTime;
+        var nowUtc = DateTime.UtcNow;
+
+        TimeSpan remainingTime = expiryDateTimeUtc - nowUtc;
+
+        if (remainingTime.Ticks > 0)
+        {
+            var options = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = remainingTime
+            };
+            await _distributedCache.SetStringAsync($"blacklist_{jti}", "canceled", options);
+            _logger.LogInformation($"Token with JTI {jti} blacklisted. Expires in {remainingTime.TotalSeconds:F0} seconds.");
+        }
+        else
+        {
+            _logger.LogInformation($"Token with JTI {jti} has already expired. No need to blacklist.");
+        }
+        return Ok(new { message = "Successfully logged out." });
     }
 
     private string GenerateJwtToken(User user)
